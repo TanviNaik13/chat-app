@@ -1,7 +1,87 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
+import { Alert, Icon, Input, InputGroup } from 'rsuite';
+import firebase from 'firebase/app';
+import { useProfile } from '../../../context/profile.context';
+import { useParams } from 'react-router-dom';
+import { database } from '../../../misc/firebase';
+
+function assembleMessages(profile, chatId) {
+  return {
+    roomId: chatId,
+    author: {
+      name: profile.name,
+      uid: profile.uid,
+      createdAt: profile.createdAt,
+      ...(profile.avatar ? { avatar: profile.avatar } : {}),
+    },
+    createdAt: firebase.database.ServerValue.TIMESTAMP,
+  };
+}
 
 const Bottom = () => {
-  return <div>bottom</div>;
+  const { profile } = useProfile();
+  const { chatId } = useParams();
+  const [loading, setLoading] = useState(false);
+
+  const [input, setInput] = useState('');
+  const onInputChange = useCallback(value => {
+    setInput(value);
+  }, []);
+
+  const onSendClick = async () => {
+    if (input.trim() === '') {
+      return;
+    }
+
+    const msgData = assembleMessages(profile, chatId);
+    msgData.text = input;
+    const updates = {};
+
+    const messageId = database.ref('messages').push().key;
+
+    updates[`/messages/${messageId}`] = msgData;
+    updates[`/rooms/${chatId}/lastMessage`] = {
+      ...msgData,
+      msgId: messageId,
+    };
+
+    setLoading(true);
+    try {
+      await database.ref().update(updates);
+      setInput('');
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      Alert.error(error.message, 4000);
+    }
+  };
+
+  const onKeyDown = ev => {
+    if (ev.keyCode === 13) {
+      ev.preventDefault();
+      onSendClick();
+    }
+  };
+  return (
+    <div>
+      <InputGroup>
+        <Input
+          placeholder="Write a new message here"
+          value={input}
+          onChange={onInputChange}
+          onKeyDown={onKeyDown}
+        />
+        <InputGroup.Button
+          color="blue"
+          appearance="primary"
+          onClick={onSendClick}
+          disabled={loading}
+        >
+          <Icon icon="send" />
+        </InputGroup.Button>
+      </InputGroup>
+    </div>
+  );
 };
 
 export default Bottom;
