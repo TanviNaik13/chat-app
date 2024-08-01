@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Alert, Button, Icon, InputGroup, Modal, Uploader } from 'rsuite';
-import InputGroupButton from 'rsuite/lib/InputGroup/InputGroupButton';
 import { useModalState } from '../../../misc/custom-hooks';
 import { upload } from '@testing-library/user-event/dist/upload';
 import { storage } from '../../../misc/firebase';
@@ -24,7 +23,7 @@ const AttachmentBtnModal = ({ afterUpload }) => {
   const onUpload = async () => {
     try {
       const uploadPromises = fileList.map(f => {
-        storage
+        return storage
           .ref(`/chat/${chatId}`)
           .child(Date.now() + f.name)
           .put(f.blobFile, {
@@ -75,7 +74,7 @@ const AttachmentBtnModal = ({ afterUpload }) => {
         </Modal.Body>
 
         <Modal.Footer>
-          <Button block disabled={loading} onClick={upload}>
+          <Button block disabled={loading} onClick={onUpload}>
             Send to chat
           </Button>
           <div className="text-right mt-2">
