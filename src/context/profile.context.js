@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import firebase from 'firebase/app';
-import { auth, database } from '../misc/firebase';
+import { auth, database, messaging } from '../misc/firebase';
 
 export const isOfflineForDatabase = {
   state: 'offline',
@@ -21,8 +21,9 @@ export const ProfileProvider = ({ children }) => {
   useEffect(() => {
     let userRef;
     let userStatusRef;
+    let tokenUnsub;
 
-    const authUnsub = auth.onAuthStateChanged(authObj => {
+    const authUnsub = auth.onAuthStateChanged(async authObj => {
       if (authObj) {
         console.log('authuid', authObj.uid);
         userStatusRef = database.ref(`/status/${authObj.uid}`);
@@ -53,12 +54,42 @@ export const ProfileProvider = ({ children }) => {
               userStatusRef.set(isOnlineForDatabase);
             });
         });
+
+        if (messaging) {
+          try {
+            const currentToken = await messaging.getToken();
+            if (currentToken) {
+              await database
+                .ref(`/fcm_tokens/${currentToken}`)
+                .set(authObj.uid);
+            }
+          } catch (error) {
+            console.log('errroooorrrrr:', error.message);
+          }
+
+          tokenUnsub = messaging.onTokenRefresh(async () => {
+            try {
+              const currentToken = await messaging.getToken();
+              if (currentToken) {
+                await database
+                  .ref(`/fcm_tokens/${currentToken}`)
+                  .set(authObj.uid);
+              }
+            } catch (error) {
+              console.log('errroooorrrrr:', error.message);
+            }
+          });
+        }
       } else {
         if (userRef) {
           userRef.off();
         }
         if (userStatusRef) {
           userStatusRef.off();
+        }
+
+        if (tokenUnsub) {
+          tokenUnsub();
         }
 
         database.ref('.info/connected').off();
@@ -75,6 +106,9 @@ export const ProfileProvider = ({ children }) => {
       }
       if (userStatusRef) {
         userStatusRef.off();
+      }
+      if (tokenUnsub) {
+        tokenUnsub();
       }
     };
   }, []);
