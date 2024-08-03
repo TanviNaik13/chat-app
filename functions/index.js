@@ -8,6 +8,7 @@
  *
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
+// eslint-disable-next-line no-unused-vars
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const serviceAccount = require('./service-account.json');
