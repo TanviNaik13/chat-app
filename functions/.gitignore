@@ -2,3 +2,4 @@ node_modules/
 *.local
 
 service-account.json
+*.log

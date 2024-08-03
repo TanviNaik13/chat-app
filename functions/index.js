@@ -1,4 +1,5 @@
 /* eslint-disable quotes */
+
 /**
  * Import function triggers from their respective submodules:
  *
@@ -7,7 +8,7 @@
  *
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
-
+const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const serviceAccount = require('./service-account.json');
 
@@ -15,10 +16,10 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: 'https://chat-web-app-44a3a-default-rtdb.firebaseio.com',
 });
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
+// eslint-disable-next-line object-curly-spacing
+const { sendFcm } = require('./src/fcm');
+
+exports.sendFcm = sendFcm;
+//   response.send('Hello from Firebase!');
 // });
