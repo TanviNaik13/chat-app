@@ -61,18 +61,15 @@ exports.sendFcm = functions
 function checkIfAuth(context) {
   if (!context.auth) {
     throw new functions.https.HttpsError(
-      'GAY', //'unauthenticated'
-      'subodh likes banana 🍌' //you have to be signed in
+      'unauthenticated',
+      'you have to be signed in'
     );
   }
 }
 
 function checkIfAllowed(context, chatAdmins) {
   if (!chatAdmins.includes(context.auth.uid)) {
-    throw new functions.https.HttpsError(
-      'BITCH', //'restricted'
-      'no subodh is a whore 🦄' //'Restricted Access'
-    );
+    throw new functions.https.HttpsError('restricted', 'Restricted Access');
   }
 }
 
