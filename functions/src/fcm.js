@@ -4,57 +4,59 @@ const admin = require('firebase-admin');
 const database = admin.database();
 const messaging = admin.messaging();
 
-exports.sendFcm = functions.https.onCall(async (data, context) => {
-  checkIfAuth(context);
+exports.sendFcm = functions
+  .region('us-central1')
+  .https.onCall(async (data, context) => {
+    checkIfAuth(context);
 
-  const { chatId, title, messages } = data;
+    const { chatId, title, message } = data;
 
-  const roomSnap = await database.ref(`/rooms/${chatId}`).once('value');
+    const roomSnap = await database.ref(`/rooms/${chatId}`).once('value');
 
-  if (!roomSnap.exists()) {
-    return false;
-  }
+    if (!roomSnap.exists()) {
+      return false;
+    }
 
-  const roomData = roomSnap.val();
+    const roomData = roomSnap.val();
 
-  checkIfAllowed(context, transformToArr(roomData.admins));
-  const fcmUsers = transformToArr(roomData.fcmUsers);
-  const userTokenPromises = fcmUsers.map(uid => getUserTokens(uid));
-  const result = await Promise.all(userTokenPromises);
+    checkIfAllowed(context, transformToArr(roomData.admins));
+    const fcmUsers = transformToArr(roomData.fcmUsers);
+    const userTokenPromises = fcmUsers.map(uid => getUserTokens(uid));
+    const result = await Promise.all(userTokenPromises);
 
-  const tokens = result.reduce(
-    (accTokens, userToken) => [...accTokens, ...userToken],
-    []
-  );
+    const tokens = result.reduce(
+      (accTokens, userToken) => [...accTokens, ...userToken],
+      []
+    );
 
-  if (tokens.length === 0) {
-    return false;
-  }
+    if (tokens.length === 0) {
+      return false;
+    }
 
-  const fcmMessage = {
-    notification: {
-      title: `${title} (${roomData.name})`,
-      body: messages,
-    },
-    tokens: tokens,
-  };
+    const fcmMessage = {
+      notification: {
+        title: `${title} (${roomData.name})`,
+        body: message,
+      },
+      tokens: tokens,
+    };
 
-  const batchResponse = await messaging.sendMulticast(fcmMessage);
-  const failedTokens = [];
+    const batchResponse = await messaging.sendMulticast(fcmMessage);
+    const failedTokens = [];
 
-  if (batchResponse.failureCount > 0) {
-    batchResponse.responses.forEach((resp, idx) => {
-      if (!resp.success) {
-        failedTokens.push(tokens[idx]);
-      }
-    });
-  }
+    if (batchResponse.failureCount > 0) {
+      batchResponse.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          failedTokens.push(tokens[idx]);
+        }
+      });
+    }
 
-  const removePromises = failedTokens.map(token =>
-    database.ref(`/fcm_tokens/${token}`).remove()
-  );
-  return Promise.all(removePromises).catch(err => err.message);
-});
+    const removePromises = failedTokens.map(token =>
+      database.ref(`/fcm_tokens/${token}`).remove()
+    );
+    return Promise.all(removePromises).catch(err => err.message);
+  });
 
 function checkIfAuth(context) {
   if (!context.auth) {
